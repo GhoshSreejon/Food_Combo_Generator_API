@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meal Combo Generator</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Use the Inter font family */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Simple animation for loading spinner */
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #fb923c; /* Orange color for spinner */
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        /* Custom styles for better visual appeal */
+        .card {
+            background-color: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+        }
+        .taste-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+
+        <!-- Header Section -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-900">3 day Meal Combo Suggestions</h1>
+            <p class="mt-2 text-lg text-gray-600">Select a day to generate three delicious and balanced meal combos!</p>
+        </header>
+
+        <!-- Controls Section -->
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8 p-4 bg-white rounded-xl shadow-sm border border-gray-200">
+            <label for="day-selector" class="font-semibold text-gray-700">Start Day:</label>
+            <select id="day-selector" class="w-full sm:w-auto bg-gray-100 border-gray-300 rounded-lg py-2 px-4 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition">
+                <option>Monday</option>
+                <option>Tuesday</option>
+                <option>Wednesday</option>
+                <option>Thursday</option>
+                <option>Friday</option>
+                <option>Saturday</option>
+                <option>Sunday</option>
+            </select>
+            <button id="generate-btn" class="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-lg transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500">
+                Generate Combos
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <main id="results-container" class="space-y-12">
+            
+        </main>
+
+    </div>
+
+    <script>
+        
+        const daySelector = document.getElementById('day-selector');
+        const generateBtn = document.getElementById('generate-btn');
+        const resultsContainer = document.getElementById('results-container');
+
+        
+        const API_URL = 'http://127.0.0.1:5000/generate_combos_3_days';
+
+        // --- Helper Functions ---
+
+        /**
+         * Sets the loading state in the UI
+         * @param {boolean} isLoading - True to show spinner, false to clear.
+         */
+        function setLoading(isLoading) {
+            if (isLoading) {
+                resultsContainer.innerHTML = `
+                    <div class="flex flex-col items-center justify-center p-16 text-center">
+                        <div class="spinner"></div>
+                        <p class="mt-4 text-gray-600 font-semibold">Generating delicious combos...</p>
+                    </div>
+                `;
+            } else {
+                resultsContainer.innerHTML = '';
+            }
+        }
+
+        /**
+         * Displays an error message in the UI
+         * @param {string} message - The error message to display.
+         */
+        function displayError(message) {
+            resultsContainer.innerHTML = `
+                <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-6 rounded-lg" role="alert">
+                    <p class="font-bold">Oops! Something went wrong.</p>
+                    <p>${message}</p>
+                    <p class="mt-2 text-sm">Please ensure your Python Flask server is running and accessible at ${API_URL}.</p>
+                </div>
+            `;
+        }
+
+        /**
+         * Gets the appropriate color for a taste profile badge.
+         * @param {string} taste - The taste profile (e.g., 'spicy', 'savory').
+         * @returns {string} - Tailwind CSS classes for the badge.
+         */
+        function getTasteBadgeColor(taste) {
+            switch (taste.toLowerCase()) {
+                case 'spicy': return 'bg-red-100 text-red-800';
+                case 'savory': return 'bg-blue-100 text-blue-800';
+                case 'sweet': return 'bg-pink-100 text-pink-800';
+                case 'mix': return 'bg-purple-100 text-purple-800';
+                default: return 'bg-gray-100 text-gray-800';
+            }
+        }
+        
+        /**
+         * Gets a food-themed icon for an item type.
+         * @param {string} type - The item type ('main', 'side', or 'drink').
+         * @returns {string} - SVG icon string.
+         */
+        function getItemIcon(type) {
+             const icons = {
+                main: `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 11c-4.418 0-8 2.239-8 5v2h16v-2c0-2.761-3.582-5-8-5zm0 0V9m0-4a2 2 0 100-4 2 2 0 000 4z" /><path stroke-linecap="round" stroke-linejoin="round" d="M4 16h16" /></svg>`,
+                side: `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-3.866 0-7 1.79-7 4s3.134 4 7 4 7-1.79 7-4-3.134-4-7-4zm0 0V6m0 12v-2" /></svg>`,
+                drink: `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5h2m-1 14v-8m8-4H6a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2z" /></svg>`
+            };
+            return icons[type.toLowerCase()] || '';
+        }
+
+        /**
+         * Renders the combo data into the results container.
+         * @param {object} data - The JSON data from the API.
+         */
+        function renderCombos(data) {
+            resultsContainer.innerHTML = ''; // Clear previous results
+            
+            // Loop through each day in the response
+            for (const day in data) {
+                const combos = data[day];
+                
+                // Create a section for the day
+                const daySection = document.createElement('section');
+                daySection.innerHTML = `<h2 class="text-3xl font-bold text-gray-800 mb-6 border-b-2 border-orange-400 pb-2">${day}</h2>`;
+
+                if (combos.length === 0) {
+                     daySection.innerHTML += `<p class="text-gray-500">Could not generate combos for this day. Try again!</p>`;
+                } else {
+                    // Create a grid for the combo cards
+                    const grid = document.createElement('div');
+                    grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8';
+                    
+                    // Loop through each combo for the day
+                    combos.forEach(combo => {
+                        const itemsHtml = combo.items.map(item => `
+                            <li class="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                                <div class="flex items-center gap-3">
+                                    ${getItemIcon(item.type)}
+                                    <div>
+                                        <p class="font-semibold text-gray-800">${item.name}</p>
+                                        <p class="text-sm text-gray-500 capitalize">${item.type}</p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <p class="font-medium">${item.calories} cal</p>
+                                    <span class="taste-badge ${getTasteBadgeColor(item.taste)} mt-1">${item.taste}</span>
+                                </div>
+                            </li>
+                        `).join('');
+
+                        grid.innerHTML += `
+                            <div class="card flex flex-col">
+                                <div class="p-6 flex-grow">
+                                    <div class="flex justify-between items-start mb-4">
+                                        <h3 class="text-2xl font-bold text-gray-900">${combo.combo_name}</h3>
+                                        <span class="taste-badge ${getTasteBadgeColor(combo.taste_profile)}">${combo.taste_profile}</span>
+                                    </div>
+                                    <ul class="space-y-3">
+                                        ${itemsHtml}
+                                    </ul>
+                                </div>
+                                <div class="bg-gray-100 p-4 rounded-b-lg mt-auto">
+                                    <p class="text-lg font-bold text-center text-orange-600">Total: ${combo.total_calories} Calories</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                     daySection.appendChild(grid);
+                }
+                resultsContainer.appendChild(daySection);
+            }
+        }
+
+        /**
+         * Main function to fetch and display combos.
+         */
+        async function fetchAndDisplayCombos() {
+            const startDay = daySelector.value;
+            setLoading(true);
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ start_day: startDay }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: "Server returned an invalid response." }));
+                    throw new Error(errorData.error || `Request failed with status ${response.status}`);
+                }
+
+                const data = await response.json();
+                renderCombos(data);
+
+            } catch (error) {
+                console.error('Error fetching combos:', error);
+                displayError(error.message);
+            }
+        }
+
+        // --- Event Listeners ---
+        generateBtn.addEventListener('click', fetchAndDisplayCombos);
+
+        // Automatically load combos for Monday on initial page load
+        window.addEventListener('DOMContentLoaded', () => {
+             daySelector.value = 'Monday';
+             fetchAndDisplayCombos();
+        });
+
+    </script>
+</body>
+</html>
