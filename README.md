@@ -19,26 +19,32 @@ JSON
   "start_day": "Tuesday"
 }
 </details>
+
 ▶️ Usage
+
 1. Clone the repo & add your menu.csv:
 
 bash
 git clone https://github.com/GhoshSreejon/Food_Combo_Generator_API.git
 cd Food_Combo_Generator_API
+
 2. Install dependencies:
 
 bash
 pip install flask pandas flask-cors
+
 3. Run the API:
 
 bash
 python app.py
+
 4. Test the endpoint:
 
 bash
 curl -X POST http://127.0.0.1:5000/generate_combos_3_days \
   -H "Content-Type: application/json" \
   -d '{"start_day":"Tuesday"}'
+  
 🧠 Built With
 <b>Python</b> & <b>Flask</b> — API framework
 <b>pandas</b> — Data handling
